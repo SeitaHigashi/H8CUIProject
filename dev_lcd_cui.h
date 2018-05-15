@@ -4,6 +4,7 @@
 
 //インクルード
 #include <stdio.h>
+//#include <stdlib.h>
 
 //構造体　宣言・定義
 typedef union {
@@ -44,9 +45,18 @@ typedef union {
     unsigned char B3210:4;
   } BIT;
 } st_lcd;
+typedef struct {
+  unsigned char DIP1;
+  unsigned char DIP2;
+  unsigned char DIP3;
+  unsigned char DIP4;
+} DIP;
 
 //仮想LCD定義
 st_lcd LCD;
+
+//仮想DIP switchFile
+FILE *fpdip;
 
 //自作関数定義
 void LCD_initialize();
@@ -58,6 +68,7 @@ void wait( unsigned int);
 void wait20us();
 void update();
 void LCDcui_out(char);
+void cui_init();
 
 //各種Define定義
 #define LCD_E	LCD.BIT.B5
@@ -78,8 +89,16 @@ _IOREG P6DR;
 unsigned char line[32];
 int point;
 
+void cui_init(){
+  fpdip = fopen("dipswitch.txt","w+");
+  //if(fpdip == NULL)exit(-1);
+  fprintf(fpdip,"0000");
+  fclose(fpdip);
+}
+
 void LCD_initialize(void)
 {
+  cui_init();
   P4DDR.BYTE= 0xFF;
   P4DR.BYTE = 0x0F;
 
@@ -108,6 +127,7 @@ void LCD_initialize(void)
 
 	lcd_out_4bit(0x01, 0);
 	wait(2);
+
 }
 
 void lcd_out_8bit(unsigned char data)
@@ -173,7 +193,6 @@ void wait( unsigned int ms )
   unsigned int i;
 
   for( i=ms * 50 ; i > 0 ; i-- ) wait20us();
-
 }
 
 void LCDcui_out(char c){
@@ -183,6 +202,7 @@ void LCDcui_out(char c){
 
 void update(){
   int i;
+  char dip1,dip2,dip3,dip4;
   printf("\033[2J");
   for(i=0;i<16;i++)printf("%c",line[i]);
   puts("");
@@ -190,6 +210,14 @@ void update(){
   puts("");
   for(i=0;i<16;i++)printf("-");
   puts("");
+  fpdip=fopen("dipswitch.txt","r");
+  fscanf(fpdip,"%c%c%c%c",&dip1,&dip2,&dip3,&dip4);
+  P5DR.BIT.B0 = dip1-'0';
+  P5DR.BIT.B1 = dip2-'0';
+  P5DR.BIT.B2 = dip3-'0';
+  P5DR.BIT.B3 = dip4-'0';
+  fclose(fpdip);
+
   printf("LED1:%c LED2:%c\n",((P4DR.BIT.B6)?'x':'o'),((P4DR.BIT.B7)?'x':'o'));
 }
 
